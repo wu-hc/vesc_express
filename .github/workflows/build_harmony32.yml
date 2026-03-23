@@ -1,7 +1,7 @@
 name: Build VESC Harmony32 Firmware
 
 on:
-  workflow_dispatch:  # 可以手动触发
+  workflow_dispatch:  # 手动触发
   push:
     branches:
       - main
@@ -19,24 +19,29 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt update
-          sudo apt install -y gcc-arm-none-eabi cmake ninja-build make
+          sudo apt install -y gcc-arm-none-eabi cmake ninja-build make python3 python3-pip
 
-      # 3️⃣ 设置硬件配置
+      # 3️⃣ 安装 Python 依赖（如果 build_all.py 用到）
+      - name: Install Python dependencies
+        run: |
+          cd main
+          pip3 install -r requirements.txt || echo "No requirements.txt, skipping"
+
+      # 4️⃣ 设置硬件配置
       - name: Set hardware configuration
         run: |
           cp -r main/hwconf/vesc/vbms32 main/hwconf/current
 
-      # 4️⃣ 构建固件（STM32 + CMake）
+      # 5️⃣ 构建固件
       - name: Build firmware with CMake
         run: |
           cd main
           mkdir -p build
           cd build
-          # 直接指定交叉编译器
           cmake .. -DCMAKE_C_COMPILER=arm-none-eabi-gcc -DCMAKE_CXX_COMPILER=arm-none-eabi-g++ -G Ninja
           cmake --build . --config Release --verbose
 
-      # 5️⃣ 上传构建产物
+      # 6️⃣ 上传生成的 binaries
       - name: Upload firmware binaries
         uses: actions/upload-artifact@v4
         with:
