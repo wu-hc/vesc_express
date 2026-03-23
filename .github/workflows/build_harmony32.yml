@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ 安装 STM32 工具链 + CMake + Ninja
+      # 2️⃣ 安装 STM32 工具链 + CMake + Ninja + Python
       - name: Install build tools
         run: |
           sudo apt update
@@ -25,23 +25,24 @@ jobs:
       - name: Install Python dependencies
         run: |
           cd main
-          pip3 install -r requirements.txt || echo "No requirements.txt, skipping"
+          if [ -f requirements.txt ]; then pip3 install -r requirements.txt; else echo "No requirements.txt, skipping"; fi
 
       # 4️⃣ 设置硬件配置
       - name: Set hardware configuration
         run: |
           cp -r main/hwconf/vesc/vbms32 main/hwconf/current
 
-      # 5️⃣ 构建固件
+      # 5️⃣ 构建固件（STM32 + CMake）
       - name: Build firmware with CMake
         run: |
           cd main
           mkdir -p build
           cd build
+          # 指定交叉编译器
           cmake .. -DCMAKE_C_COMPILER=arm-none-eabi-gcc -DCMAKE_CXX_COMPILER=arm-none-eabi-g++ -G Ninja
           cmake --build . --config Release --verbose
 
-      # 6️⃣ 上传生成的 binaries
+      # 6️⃣ 上传构建产物
       - name: Upload firmware binaries
         uses: actions/upload-artifact@v4
         with:
