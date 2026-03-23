@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 检出源码
+      # 1️⃣ 检出仓库
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -21,26 +21,22 @@ jobs:
           sudo apt update
           sudo apt install -y gcc-arm-none-eabi cmake ninja-build make
 
-      # 3️⃣ 设置 hwconf
+      # 3️⃣ 设置硬件配置
       - name: Set hardware configuration
         run: |
           cp -r main/hwconf/vesc/vbms32 main/hwconf/current
 
-      # 4️⃣ 构建固件
+      # 4️⃣ 构建固件（STM32 + CMake）
       - name: Build firmware with CMake
         run: |
           cd main
           mkdir -p build
           cd build
-          # 如果仓库里有 STM32 toolchain 文件可以指定
-          if [ -f ../toolchain/stm32_toolchain.cmake ]; then
-            cmake .. -DCMAKE_TOOLCHAIN_FILE=../toolchain/stm32_toolchain.cmake -G Ninja
-          else
-            cmake .. -G Ninja
-          fi
-          cmake --build . --config Release
+          # 直接指定交叉编译器
+          cmake .. -DCMAKE_C_COMPILER=arm-none-eabi-gcc -DCMAKE_CXX_COMPILER=arm-none-eabi-g++ -G Ninja
+          cmake --build . --config Release --verbose
 
-      # 5️⃣ 上传生成的 binaries
+      # 5️⃣ 上传构建产物
       - name: Upload firmware binaries
         uses: actions/upload-artifact@v4
         with:
