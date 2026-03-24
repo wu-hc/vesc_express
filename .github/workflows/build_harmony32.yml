@@ -18,24 +18,23 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install ESP-IDF v5.1
+      - name: Install ESP-IDF v5.2.2
         shell: bash
         run: |
           set -eux
-          git clone --branch v5.1 https://github.com/espressif/esp-idf.git "$HOME/esp/esp-idf"
+          git clone --branch v5.2.2 https://github.com/espressif/esp-idf.git "$HOME/esp/esp-idf"
           cd "$HOME/esp/esp-idf"
-          ./install.sh esp32c3
+          ./install.sh esp32c3 esp32s3
           echo "IDF_PATH=$HOME/esp/esp-idf" >> "$GITHUB_ENV"
-          echo "IDF_PY_ENV_PATH=$HOME/.espressif/python_env/idf5.1_py3.11_env" >> "$GITHUB_ENV"
+          echo "IDF_PY_ENV_PATH=$HOME/.espressif/python_env/idf5.2_py3.11_env" >> "$GITHUB_ENV"
 
-      - name: Repair ESP-IDF Python environment before export
+      - name: Repair ESP-IDF Python environment
         shell: bash
         run: |
           set -eux
           "$IDF_PY_ENV_PATH/bin/python" -m ensurepip --upgrade || true
           "$IDF_PY_ENV_PATH/bin/python" -m pip install --upgrade pip wheel
           "$IDF_PY_ENV_PATH/bin/python" -m pip install "setuptools<82"
-          "$IDF_PY_ENV_PATH/bin/python" -m pip show setuptools
           "$IDF_PY_ENV_PATH/bin/python" -c "import pkg_resources; print(pkg_resources.__file__)"
 
       - name: Export ESP-IDF
@@ -61,7 +60,7 @@ jobs:
         run: |
           set -eux
           . "$IDF_PATH/export.sh"
-          cd main
+          rm -rf build
           idf.py set-target esp32c3
           idf.py build -v
 
@@ -69,9 +68,9 @@ jobs:
         shell: bash
         run: |
           set -eux
-          test -f main/build/bootloader/bootloader.bin
-          test -f main/build/partition_table/partition-table.bin
-          find main/build -maxdepth 1 -name "*.bin" -type f | grep -q .
+          test -f build/bootloader/bootloader.bin
+          test -f build/partition_table/partition-table.bin
+          find build -maxdepth 1 -name "*.bin" -type f | grep -q .
 
       - name: Package firmware
         shell: bash
@@ -82,9 +81,9 @@ jobs:
           ZIP_NAME="${DATE_STR}_Harmony32_${COMMIT_HASH}.zip"
 
           mkdir -p out
-          cp main/build/bootloader/bootloader.bin out/
-          cp main/build/partition_table/partition-table.bin out/
-          find main/build -maxdepth 1 -name "*.bin" -type f -exec cp {} out/ \;
+          cp build/bootloader/bootloader.bin out/
+          cp build/partition_table/partition-table.bin out/
+          find build -maxdepth 1 -name "*.bin" -type f -exec cp {} out/ \;
 
           cd out
           zip -r "../${ZIP_NAME}" ./*
