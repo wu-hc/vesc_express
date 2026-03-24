@@ -62,7 +62,7 @@ jobs:
           . "$IDF_PATH/export.sh"
           rm -rf build
           idf.py set-target esp32c3
-          idf.py build --verbose
+          idf.py build
 
       - name: Check expected binaries
         shell: bash
