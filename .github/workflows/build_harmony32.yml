@@ -17,7 +17,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install ESP-IDF
-        uses: espressif/setup-esp-idf@v2
+        uses: espressif/setup-esp-idf@v4
         with:
           version: v5.1
 
@@ -28,7 +28,7 @@ jobs:
           idf.py build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vesc_firmware
           path: main/build
