@@ -1,5 +1,6 @@
-name: ESP32 Build
+name: Build Harmony32 VESC Express
 
+# 可以手动触发，也会在 push 时自动编译
 on:
   push:
     branches: [ main ]
@@ -8,26 +9,39 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
+    steps:
+      # 1️⃣ 获取仓库代码
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ 安装 Python（ESP-IDF 需要 Python）
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
+      # 3️⃣ 安装 ESP-IDF v5.1
       - name: Install ESP-IDF
         uses: espressif/setup-esp-idf@v4
         with:
           version: v5.1
 
+      # 4️⃣ 安装依赖库（如果仓库有 requirements.txt）
+      - name: Install Python requirements
+        if: exists('main/requirements.txt')
+        run: |
+          pip install -r main/requirements.txt
+
+      # 5️⃣ 编译固件
       - name: Build firmware
         run: |
           cd main
           idf.py set-target esp32c3
           idf.py build
 
-      - name: Upload artifacts
+      # 6️⃣ 上传产物，方便下载
+      - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
           name: vesc_firmware
