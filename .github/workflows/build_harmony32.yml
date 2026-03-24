@@ -28,12 +28,19 @@ jobs:
           ./install.sh
           echo "IDF_PATH=$HOME/esp/esp-idf" >> $GITHUB_ENV
 
-      # 4️⃣ 初始化 ESP-IDF 并激活虚拟环境
+      # 4️⃣ 初始化 ESP-IDF 并激活虚拟环境（调试输出）
       - name: Source ESP-IDF and activate venv
         run: |
+          set -x
           . $IDF_PATH/export.sh
-          source $HOME/.espressif/python_env/idf5.1_py3.11_env/bin/activate
+          echo "IDF_PYTHON_ENV=$IDF_PYTHON_ENV"
+          if [ -z "$IDF_PYTHON_ENV" ]; then
+            echo "ERROR: IDF_PYTHON_ENV is empty!"
+            exit 1
+          fi
+          source $IDF_PYTHON_ENV/bin/activate
           python -m pip install --upgrade pip setuptools wheel
+          python -m pip list
 
       # 5️⃣ 安装仓库 Python 依赖（可选）
       - name: Install repository Python requirements
