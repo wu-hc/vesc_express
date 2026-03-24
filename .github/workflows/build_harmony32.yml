@@ -20,15 +20,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 3️⃣ 手动安装 ESP-IDF v5.1
+      # 3️⃣ 手动安装 ESP-IDF
       - name: Install ESP-IDF manually
         run: |
-          git clone --branch v5.1 https://github.com/espressif/esp-idf.git ~/esp/esp-idf
-          cd ~/esp/esp-idf
+          git clone --branch v5.1 https://github.com/espressif/esp-idf.git $HOME/esp/esp-idf
+          cd $HOME/esp/esp-idf
           ./install.sh
-          echo "source ~/esp/esp-idf/export.sh" >> $GITHUB_ENV
+          echo "IDF_PATH=$HOME/esp/esp-idf" >> $GITHUB_ENV
 
-      # 4️⃣ 安装 Python 依赖（如果有 requirements.txt）
+      # 4️⃣ 安装 Python 依赖（如果存在）
       - name: Install Python requirements
         run: |
           if [ -f main/requirements.txt ]; then pip install -r main/requirements.txt; fi
@@ -36,14 +36,22 @@ jobs:
       # 5️⃣ 编译固件
       - name: Build firmware
         run: |
-          source $GITHUB_ENV
+          . $IDF_PATH/export.sh
           cd main
           idf.py set-target esp32c3
           idf.py build
 
-      # 6️⃣ 上传产物
-      - name: Upload firmware artifacts
+      # 6️⃣ 打包固件成带日期的 zip
+      - name: Package firmware
+        run: |
+          ZIP_NAME="$(date +'%Y%m%d')_Harmony32_vesc.zip"
+          cd main/build
+          zip -r $ZIP_NAME bootloader.bin vesc_express.bin partition_table.bin
+          mv $ZIP_NAME $GITHUB_WORKSPACE/
+
+      # 7️⃣ 上传 zip 文件作为 artifact
+      - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: vesc_firmware
-          path: main/build
+          path: $GITHUB_WORKSPACE/*.zip
