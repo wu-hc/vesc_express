@@ -10,58 +10,76 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout 仓库
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2️⃣ 安装系统 Python
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3️⃣ 安装 ESP-IDF v5.1 并跳过 Python 检查
       - name: Install ESP-IDF manually
         run: |
           git clone --branch v5.1 https://github.com/espressif/esp-idf.git $HOME/esp/esp-idf
           cd $HOME/esp/esp-idf
-          ./install.sh --skip-esp-python-check
+          ./install.sh esp32c3
           echo "IDF_PATH=$HOME/esp/esp-idf" >> $GITHUB_ENV
+          echo "IDF_PY_ENV_PATH=$HOME/.espressif/python_env/idf5.1_py3.11_env" >> $GITHUB_ENV
 
-      # 4️⃣ 初始化 ESP-IDF 并激活虚拟环境
-      - name: Source ESP-IDF and upgrade venv
+      - name: Repair ESP-IDF Python environment before export
         run: |
-          set -x
-          . $IDF_PATH/export.sh
-          source $HOME/.espressif/python_env/idf5.1_py3.11_env/bin/activate
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip list
+          set -eux
+          "$IDF_PY_ENV_PATH/bin/python" -m ensurepip --upgrade || true
+          "$IDF_PY_ENV_PATH/bin/python" -m pip install --upgrade pip setuptools wheel
+          "$IDF_PY_ENV_PATH/bin/python" -m pip show setuptools
+          "$IDF_PY_ENV_PATH/bin/python" -c "import pkg_resources; print(pkg_resources.__file__)"
 
-      # 5️⃣ 安装仓库 Python 依赖（可选）
+      - name: Export ESP-IDF
+        run: |
+          set -eux
+          . "$IDF_PATH/export.sh"
+          python --version
+          which python
+          idf.py --version
+
       - name: Install repository Python requirements
         run: |
-          if [ -f main/requirements.txt ]; then pip install -r main/requirements.txt; fi
+          if [ -f main/requirements.txt ]; then
+            pip install -r main/requirements.txt
+          fi
 
-      # 6️⃣ 编译固件
       - name: Build firmware
         run: |
+          set -eux
+          . "$IDF_PATH/export.sh"
           cd main
           idf.py set-target esp32c3
           idf.py build -v
 
-      # 7️⃣ 打包固件成 zip（带日期 + git commit hash）
+      - name: Check expected binaries
+        run: |
+          set -eux
+          test -f main/build/bootloader/bootloader.bin
+          test -f main/build/partition_table/partition-table.bin
+          test -f main/build/*.bin
+
       - name: Package firmware
         run: |
+          set -eux
           COMMIT_HASH=$(git rev-parse --short HEAD)
           DATE_STR=$(date +'%Y%m%d')
           ZIP_NAME="${DATE_STR}_Harmony32_${COMMIT_HASH}.zip"
-          cd main/build
-          zip -r $ZIP_NAME bootloader.bin vesc_express.bin partition_table.bin
-          mv $ZIP_NAME $GITHUB_WORKSPACE/
+          mkdir -p out
+          cp main/build/bootloader/bootloader.bin out/
+          cp main/build/partition_table/partition-table.bin out/
+          find main/build -maxdepth 1 -name "*.bin" -type f -exec cp {} out/ \;
+          cd out
+          zip -r "../${ZIP_NAME}" ./*
+          cd ..
+          ls -lh "${ZIP_NAME}"
 
-      # 8️⃣ 上传 artifact
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: vesc_firmware
-          path: $GITHUB_WORKSPACE/*.zip
+          path: "*.zip"
