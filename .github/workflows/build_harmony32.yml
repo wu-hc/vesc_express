@@ -23,7 +23,7 @@ jobs:
           cd main
           idf.py build
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vesc_firmware
           path: main/build
