@@ -33,7 +33,7 @@ jobs:
         run: |
           . $IDF_PATH/export.sh
 
-      # 5️⃣ 升级 ESP-IDF 自带虚拟环境 pip/setuptools/wheel
+      # 5️⃣ 升级 ESP-IDF 虚拟环境 pip/setuptools/wheel
       - name: Upgrade pip/setuptools/wheel in ESP-IDF venv
         run: |
           ESP_PYTHON_ENV="$HOME/.espressif/python_env/idf5.1_py3.11_env"
