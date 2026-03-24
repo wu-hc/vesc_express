@@ -14,13 +14,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ 安装 Python 系统环境
+      # 2️⃣ 安装系统 Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # 3️⃣ 手动安装 ESP-IDF v5.1
+      # 3️⃣ 安装 ESP-IDF v5.1
       - name: Install ESP-IDF manually
         run: |
           git clone --branch v5.1 https://github.com/espressif/esp-idf.git $HOME/esp/esp-idf
@@ -28,26 +28,30 @@ jobs:
           ./install.sh
           echo "IDF_PATH=$HOME/esp/esp-idf" >> $GITHUB_ENV
 
-      # 4️⃣ 升级 ESP-IDF 虚拟环境 pip/setuptools/wheel，解决 pkg_resources 报错
+      # 4️⃣ 初始化 ESP-IDF 环境
+      - name: Source ESP-IDF
+        run: |
+          . $IDF_PATH/export.sh
+
+      # 5️⃣ 升级 ESP-IDF 自带虚拟环境 pip/setuptools/wheel
       - name: Upgrade pip/setuptools/wheel in ESP-IDF venv
         run: |
           ESP_PYTHON_ENV="$HOME/.espressif/python_env/idf5.1_py3.11_env"
           $ESP_PYTHON_ENV/bin/python -m pip install --upgrade pip setuptools wheel
 
-      # 5️⃣ 安装仓库 Python 依赖（可选）
+      # 6️⃣ 安装仓库 Python 依赖（可选）
       - name: Install repository Python requirements
         run: |
           if [ -f main/requirements.txt ]; then pip install -r main/requirements.txt; fi
 
-      # 6️⃣ 编译固件
+      # 7️⃣ 编译固件
       - name: Build firmware
         run: |
-          . $IDF_PATH/export.sh
           cd main
           idf.py set-target esp32c3
           idf.py build -v
 
-      # 7️⃣ 打包固件成带日期和 git commit hash 的 zip
+      # 8️⃣ 打包固件成带日期和 git commit hash 的 zip
       - name: Package firmware
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
@@ -57,7 +61,7 @@ jobs:
           zip -r $ZIP_NAME bootloader.bin vesc_express.bin partition_table.bin
           mv $ZIP_NAME $GITHUB_WORKSPACE/
 
-      # 8️⃣ 上传 zip 文件
+      # 9️⃣ 上传 zip 文件
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
