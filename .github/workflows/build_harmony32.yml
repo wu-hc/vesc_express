@@ -20,25 +20,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 3️⃣ 安装 ESP-IDF v5.1
+      # 3️⃣ 安装 ESP-IDF v5.1 并跳过 Python 检查
       - name: Install ESP-IDF manually
         run: |
           git clone --branch v5.1 https://github.com/espressif/esp-idf.git $HOME/esp/esp-idf
           cd $HOME/esp/esp-idf
-          ./install.sh
+          ./install.sh --skip-esp-python-check
           echo "IDF_PATH=$HOME/esp/esp-idf" >> $GITHUB_ENV
 
-      # 4️⃣ 初始化 ESP-IDF 并激活虚拟环境（调试输出）
-      - name: Source ESP-IDF and activate venv
+      # 4️⃣ 初始化 ESP-IDF 并激活虚拟环境
+      - name: Source ESP-IDF and upgrade venv
         run: |
           set -x
           . $IDF_PATH/export.sh
-          echo "IDF_PYTHON_ENV=$IDF_PYTHON_ENV"
-          if [ -z "$IDF_PYTHON_ENV" ]; then
-            echo "ERROR: IDF_PYTHON_ENV is empty!"
-            exit 1
-          fi
-          source $IDF_PYTHON_ENV/bin/activate
+          source $HOME/.espressif/python_env/idf5.1_py3.11_env/bin/activate
           python -m pip install --upgrade pip setuptools wheel
           python -m pip list
 
@@ -54,7 +49,7 @@ jobs:
           idf.py set-target esp32c3
           idf.py build -v
 
-      # 7️⃣ 打包固件成 zip 文件（带日期 + git commit hash）
+      # 7️⃣ 打包固件成 zip（带日期 + git commit hash）
       - name: Package firmware
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
